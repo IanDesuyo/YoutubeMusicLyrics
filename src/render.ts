@@ -6,23 +6,7 @@ function html(strings: string) {
   return template.content.firstChild;
 }
 
-export function createElements(
-  buttonClickCallback: EventListenerOrEventListenerObject,
-  buttonRclickCallback: EventListenerOrEventListenerObject,
-  buttonScrollCallback: EventListenerOrEventListenerObject
-) {
-  const style = createStyleElement();
-  const lyricButtonEl = createLyricButtonElement(
-    buttonClickCallback,
-    buttonRclickCallback,
-    buttonScrollCallback
-  );
-  const lyricContainerEl = createContainerElement();
-
-  return [lyricButtonEl, lyricContainerEl];
-}
-
-function createStyleElement() {
+export function createStyleElement() {
   const style = html(`
     <style id="youtube-lyric">
       .lyric-container {
@@ -32,12 +16,55 @@ function createStyleElement() {
         color: white;
         font-size: x-large;
         min-height: 36px;
+        transition: min-height 0.5s ease-in-out;
       }
       .lyric-container.active {
         display: block;
       }
+      .lyric-container li {
+        display: none;
+      }
+      .lyric-container li.active {
+        display: block;
+      }
+      .lyric-container li.active p {
+        display: inline;
+        margin: 16px;
+      }
+      .lyric-container.fullscreen {
+        min-height: 90vh;
+      }
+      .lyric-container.fullscreen li {
+        display: block;
+        margin-top: 8px;
+      }
+      .lyric-container.fullscreen li p {
+        display: block;
+        margin: 0;
+      }
       .toggle-lyrics.active {
         color: #FFF;
+      }
+      .lyric-list {
+        max-height: var(--ytmusic-player-bar-height);
+        transition: max-height 0.5s ease-in-out;
+      }
+      .lyric-container.fullscreen .lyric-list {
+        list-style-type: none;
+        max-height: 90vh !important;
+        overflow-y: scroll !important;
+      }
+      .lyric-container.fullscreen .lyric-list::-webkit-scrollbar {
+        display: none;
+      }
+      .lyric-container.fullscreen .lyric-list li {
+        color: rgba(255, 255, 255, 0.7);
+        transition: color 0.2s ease-in-out;
+        transition: font-size 0.2s ease-in-out;
+      }
+      .lyric-container.fullscreen .lyric-list li.lyric.active {
+        color: white;
+        font-size: larger;
       }
     </style>
   `);
@@ -47,10 +74,8 @@ function createStyleElement() {
   return style as HTMLElement;
 }
 
-function createLyricButtonElement(
-  buttonClickCallback: EventListenerOrEventListenerObject,
-  buttonRclickCallback: EventListenerOrEventListenerObject,
-  buttonScrollCallback: EventListenerOrEventListenerObject
+export function createLyricButtonElement(
+  listeners: { [key: string]: EventListenerOrEventListenerObject } = {}
 ) {
   const controlsButtons = document.querySelector(".right-controls-buttons.ytmusic-player-bar");
 
@@ -81,15 +106,18 @@ function createLyricButtonElement(
     </tp-yt-paper-icon-button>;
   `);
 
-  lyricButton.addEventListener("click", buttonClickCallback);
-  lyricButton.addEventListener("contextmenu", buttonRclickCallback);
-  lyricButton.addEventListener("wheel", buttonScrollCallback);
+  for (const [eventName, callback] of Object.entries(listeners)) {
+    lyricButton.addEventListener(eventName, callback);
+  }
+
   controlsButtons.insertBefore(lyricButton, controlsButtons.childNodes[2]);
 
   return lyricButton as HTMLElement;
 }
 
-function createContainerElement() {
+export function createContainerElement(
+  listeners: { [key: string]: EventListenerOrEventListenerObject } = {}
+) {
   const playerBar = document.querySelector("ytmusic-player-bar") as HTMLElement;
   playerBar.style.height = "auto";
   playerBar.style.minHeight = "var(--ytmusic-player-bar-height)";
@@ -101,19 +129,24 @@ function createContainerElement() {
     ></div>
   `);
 
+  for (const [eventName, callback] of Object.entries(listeners)) {
+    lyricContainer.addEventListener(eventName, callback);
+  }
+
   playerBar.appendChild(lyricContainer);
 
   return lyricContainer as HTMLElement;
 }
 
-export function renderLyrics(container: HTMLElement, lyrics: Lyric[] | null) {
+export function renderLyrics(container: HTMLElement, lyrics: Lyric[]) {
   container.innerHTML = "";
 
   const ul = html(`<ul class="lyric-list"></ul>`);
 
-  if (lyrics === null) {
+  if (!lyrics) {
     const li = document.createElement("li");
-    li.innerText = "No lyrics found";
+    li.innerHTML = "<p>No lyrics found</p>";
+    li.classList.add("other", "active");
     ul.appendChild(li);
   } else {
     for (const lyric of lyrics) {
@@ -121,21 +154,25 @@ export function renderLyrics(container: HTMLElement, lyrics: Lyric[] | null) {
       // add attr time
       li.setAttribute("time", String(lyric.time));
 
+      let lyricText = "";
+
       if (lyric?.text) {
-        let text = lyric.text;
-
-        if (lyric?.translated) {
-          text += ` / ${lyric.translated}`;
-        }
-
-        li.innerText = text;
-      } else {
-        li.classList.add("non-lyric");
+        lyricText += `<p>${lyric.text}</p>`;
+      }
+      if (lyric?.translated) {
+        lyricText += `<p>${lyric.translated}</p>`;
       }
 
+      li.innerHTML = lyricText;
+      if (lyricText === "") {
+        li.classList.add("other");
+      } else {
+        li.classList.add("lyric");
+      }
       ul.appendChild(li);
     }
   }
 
   container.appendChild(ul);
+  return ul as HTMLElement;
 }

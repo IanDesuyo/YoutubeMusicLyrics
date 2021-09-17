@@ -1,33 +1,27 @@
 import { name, version, author } from "../package.json";
 import fetchMusixmatch from "./api/musixmatch";
 import fetchNeteaseMusic from "./api/neteaseMusic";
-import { createElements, renderLyrics } from "./render";
+import {
+  createContainerElement,
+  createLyricButtonElement,
+  createStyleElement,
+  renderLyrics,
+} from "./render";
 import { artistFormatter, titleFormatter } from "./utils/formatter";
 
 var currentState: Song;
 var timeObserver: MutationObserver;
-var lyricActive: boolean = false;
-var lyricFullscreenActive: boolean = false;
 var lyricButtonEl: HTMLElement;
 var lyricContainerEl: HTMLElement;
+var lyricListEl: HTMLElement;
 var lyricDelay: number = 0.0;
 
 function init() {
   console.log(name, version, `Made by ${author}`);
 
   function toogleLyric(e: MouseEvent) {
-    lyricActive = !lyricActive;
-    lyricFullscreenActive = false;
-
     lyricButtonEl.classList.toggle("active");
     lyricContainerEl.classList.toggle("active");
-  }
-
-  function toogleFullscreen(e: MouseEvent) {
-    e.preventDefault();
-    lyricFullscreenActive = !lyricFullscreenActive;
-
-    lyricContainerEl.classList.toggle("fullscreen");
   }
 
   function changeLyricDelay(e: WheelEvent) {
@@ -35,6 +29,11 @@ function init() {
     e.deltaY > 0 ? (lyricDelay += 0.1) : (lyricDelay -= 0.1);
 
     lyricButtonEl.title = `${lyricDelay.toFixed(1)}s`;
+  }
+
+  function toogleFullscreen(e: MouseEvent) {
+    e.stopPropagation();
+    lyricContainerEl.classList.toggle("fullscreen");
   }
 
   async function songChangeCallback(mutations: MutationRecord[]) {
@@ -88,27 +87,41 @@ function init() {
       (await fetchNeteaseMusic(formatedTitle, formatedArtists)) ||
       (await fetchMusixmatch(formatedTitle, formatedArtists));
 
-    // renderLyrics(lyricContainerEl, lyric);
+    lyricListEl = renderLyrics(lyricContainerEl, lyric);
+    lyricDelay = 0.0;
+    lyricButtonEl.removeAttribute("title");
 
-    if (!lyric) return (lyricContainerEl.innerHTML = "");
+    if (!lyric) return;
 
     const lyricReversed = lyric.reverse();
-    
-    lyricDelay = 0.0;
+    let currentLyric: Lyric;
 
     function timeChangeCallback(mutations: MutationRecord[]) {
       const matation = mutations.find(mutation => mutation.type === "characterData");
       const timeMatch = /^\s*(\d+):(\d+)/.exec(matation.target.textContent);
       const currentTime = parseInt(timeMatch[1]) * 60 + parseInt(timeMatch[2]);
-      const currentLyric = lyricReversed.find(x => x.time <= currentTime + 0.5 + lyricDelay);
+      const preventLyric = currentLyric;
+      currentLyric = lyricReversed.find(x => x.time <= currentTime + 0.5 + lyricDelay);
 
-      let lyric = currentLyric?.text || "";
+      if (currentLyric !== preventLyric) {
+        lyricListEl.querySelectorAll(`li`).forEach(li => {
+          li.classList.remove("active");
+        });
+        if (currentLyric) {
+          const currentLyricEl = lyricListEl.querySelector(
+            `li[time="${currentLyric.time}"]`
+          ) as HTMLElement;
 
-      if (currentLyric?.translated) {
-        lyric += ` / ${currentLyric.translated}`;
+          currentLyricEl.classList.add("active");
+          
+          const scrollTo = currentLyricEl.offsetTop - lyricListEl.offsetHeight / 2;
+
+          lyricListEl.scrollTo({
+            top: scrollTo,
+            behavior: "smooth",
+          });
+        }
       }
-
-      lyricContainerEl.innerHTML = lyric;
     }
 
     timeObserver = new MutationObserver(timeChangeCallback);
@@ -118,11 +131,15 @@ function init() {
     });
   }
 
-  [lyricButtonEl, lyricContainerEl] = createElements(
-    toogleLyric,
-    toogleFullscreen,
-    changeLyricDelay
-  );
+  createStyleElement();
+  lyricButtonEl = createLyricButtonElement({
+    click: toogleLyric,
+    wheel: changeLyricDelay,
+  });
+  lyricContainerEl = createContainerElement({
+    click: toogleFullscreen,
+  });
+
   const observer = new MutationObserver(songChangeCallback);
   observer.observe(document.querySelector(".content-info-wrapper"), {
     childList: true,
