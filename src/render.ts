@@ -1,9 +1,11 @@
+import { getValue } from "./utils/GM";
+
 function html(strings: string) {
   const template = document.createElement("template");
 
   template.innerHTML = strings.trim();
 
-  return template.content.firstChild;
+  return template.content.firstChild as HTMLElement;
 }
 
 export function createStyleElement() {
@@ -66,12 +68,15 @@ export function createStyleElement() {
         color: white;
         font-size: larger;
       }
+      .lyric-container.no-translation li p:nth-child(even) {
+        display: none;
+      }
     </style>
   `);
 
   document.head.appendChild(style);
 
-  return style as HTMLElement;
+  return style;
 }
 
 export function createLyricButtonElement(
@@ -112,7 +117,7 @@ export function createLyricButtonElement(
 
   controlsButtons.insertBefore(lyricButton, controlsButtons.childNodes[2]);
 
-  return lyricButton as HTMLElement;
+  return lyricButton;
 }
 
 export function createContainerElement(
@@ -129,13 +134,15 @@ export function createContainerElement(
     ></div>
   `);
 
+  getValue("NoTranslation", false) ? lyricContainer.classList.add("no-translation") : null;
+
   for (const [eventName, callback] of Object.entries(listeners)) {
     lyricContainer.addEventListener(eventName, callback);
   }
 
   playerBar.appendChild(lyricContainer);
 
-  return lyricContainer as HTMLElement;
+  return lyricContainer;
 }
 
 export function renderLyrics(container: HTMLElement, lyrics: Lyric[]) {
@@ -174,5 +181,5 @@ export function renderLyrics(container: HTMLElement, lyrics: Lyric[]) {
   }
 
   container.appendChild(ul);
-  return ul as HTMLElement;
+  return ul;
 }

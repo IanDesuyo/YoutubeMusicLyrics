@@ -11,34 +11,40 @@ export default async function fetchMusixmatch(
   title: string,
   artists: string[],
   targetLang: Language = Language.Japanese
-): Promise<Lyric[]> {
-  console.log("fetchMusixmatch", title, artists);
-
+): Promise<SongData> {
   return request(`${apiUrl}&user_language=${targetLang}&q_track=${title} ${artists.join(" ")}`, {
     headers: {
       Origin: "musixmatch.com",
     },
   })
     .then(res => {
-      const {
-        message: {
-          body: { macro_calls },
-        },
-      } = res.data;
-      const subtitle_list = macro_calls["track.subtitles.get"]?.message?.body?.subtitle_list;
+      const data: MusixmatchResponse = res.data;
 
-      if (subtitle_list && subtitle_list.length > 0) {
-        const subs = subtitle_list[0].subtitle.subtitle_body;
-
-        return subs === "" ? null : musixmatchLyric2dict(subs);
-      } else if (macro_calls["matcher.track.get"]?.message?.body) {
-        const info = macro_calls["matcher.track.get"].message.body.track;
-
-        if (info.instrumental) return { text: "Instrumental track.", time: 0 };
+      const track = data.message.body.macro_calls["matcher.track.get"].message.body?.track;
+      if (!track) {
+        return null;
       }
+
+      const result: SongData = {
+        title: track.track_name,
+        artists: [track.artist_name],
+        album: track.album_name,
+        length: track.track_length,
+        source: LyricSource.Musixmatch,
+        id: "musixmatch",
+      };
+
+      const subtitles =
+        data.message.body.macro_calls["track.subtitles.get"].message.body?.subtitle_list;
+      if (subtitles) {
+        result.data = musixmatchLyric2dict(subtitles[0].subtitle.subtitle_body);
+      }
+
+      console.log("[YoutubeMusicLyrics] fetchMusixmatch", result);
+      return result;
     })
     .catch(err => {
-      console.error("fetchMusixmatch", err);
+      console.error("[YoutubeMusicLyrics] fetchMusixmatch", err);
       return null;
     });
 }

@@ -1,9 +1,13 @@
 import { request } from "../utils/GM";
 
-export default async function translate(sl: string = "zh-cn", tl: string = "zh-tw", text: string) {
+export default async function translate(
+  form: Language = Language.ChineseSimplified,
+  to: Language = Language.ChineseTraditional,
+  text: string
+) {
   return request(
     "https://translate.googleapis.com/translate_a/single?client=gtx&dt=t" +
-      `&sl=${sl}&tl=${tl}` +
+      `&sl=${form}&tl=${to}` +
       `&q=${encodeURI(text)}`
   ).then(res => {
     let translated = "";

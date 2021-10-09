@@ -2,59 +2,75 @@ import { request } from "../utils/GM";
 import src2lyric from "../utils/src2lyric";
 import translate from "./googleTranslate";
 
-export default async function fetchNeteaseMusic(title: string, artists: string[]) {
-  console.log("fetchNeteaseMusic");
-
-  const songIds = await fetchNeteaseMusicID(title, artists);
-
-  for (let i = 0; i < (songIds.length <= 5 ? songIds.length : 5); i++) {
-    const lyric = await fetchNeteaseMusicLyrics(songIds[i]);
-    if (lyric) return lyric;
-  }
-}
-
-async function fetchNeteaseMusicID(title: string, artists: string[]): Promise<number[]> {
-  console.log("fetchNeteaseMusicID", title, artists);
+export default async function fetchNeteaseMusic(
+  title: string,
+  artists: string[]
+): Promise<SongData[]> {
   return request(`${process.env.CLOUDMUSIC_API}/cloudsearch?keywords=${title} ${artists.join(" ")}`)
     .then(res => {
-      const {
-        result: { songs: songs },
-      } = res.data;
+      const data: NeteaseMusicResponse = res.data;
+      const result: SongData[] = [];
+      const others: SongData[] = [];
 
-      let reslutIds: number[] = [];
+      for (const song of data.result.songs) {
+        const songTitle = song.name.toLowerCase();
+        const songAlias = song.alia.map(a => a.toLowerCase());
 
-      songs.forEach(
-        (song: { name: string; ar: { name: string }[]; id: number; tns?: string[] }) => {
-          let songTitle = song.name.toLowerCase();
+        const songArtists = song.ar.map(artist => artist.name.toLowerCase());
+        const songArtistsAlias = song.ar.map(artist =>
+          artist.alias.map(alias => alias.toLowerCase())
+        );
+
+        const res: SongData = {
+          title: song.name,
+          artists: song.ar.map(artist => artist.name),
+          album: song.al.name,
+          length: song.dt / 1000,
+          source: LyricSource.NeteaseMusic,
+          id: song.id.toString(),
+        };
+        if (songTitle === title || songAlias?.includes(title)) {
           if (
-            (songTitle === title || song.tns?.includes(title)) &&
-            artists.includes(song.ar[0].name.toLowerCase())
+            songArtists.some(artist => artists.includes(artist)) ||
+            songArtistsAlias.some(artist => artists.some(a => artist.includes(a)))
           ) {
-            reslutIds.unshift(song.id);
-          } else if (songTitle === title) {
-            reslutIds.push(song.id);
+            result.unshift(res);
+          } else {
+            result.push(res);
           }
+        } else {
+          others.push(res);
         }
-      );
+      }
 
-      return reslutIds;
+      console.log("[YoutubeMusicLyrics] fetchNeteaseMusic", result, others);
+      return [...result, ...others];
     })
     .catch(err => {
-      console.error("fetchNeteaseMusicID", err);
+      console.error("[YoutubeMusicLyrics] fetchNeteaseMusic", err);
       return [];
     });
 }
 
-async function fetchNeteaseMusicLyrics(songId: number): Promise<Lyric[]> {
-  console.log("fetchNeteaseMusicLyrics", songId);
+export async function fetchNeteaseMusicLyrics(songId: number): Promise<Lyric[]> {
+  console.log("[YoutubeMusicLyrics] fetchNeteaseMusicLyrics", songId);
   return request(`${process.env.CLOUDMUSIC_API}/lyric?id=${songId}`)
     .then(async res => {
-      if (!res.data?.lrc || !res.data.lrc?.lyric) return null;
+      const data: NeteaseMusicLyricsResponse = res.data;
+      if (!data.lrc) {
+        return null;
+      }
 
-      const lyric = src2lyric(res.data.lrc.lyric);
+      const lyric = src2lyric(data.lrc.lyric);
 
-      if (res.data.tlyric?.lyric && true) {
-        const tlyric = await src2lyric(await translate("zh-cn", "zh-tw", res.data.tlyric.lyric));
+      if (data.tlyric?.lyric) {
+        const tlyric = await src2lyric(
+          await translate(
+            Language.ChineseSimplified,
+            Language.ChineseTraditional,
+            data.tlyric.lyric
+          )
+        );
 
         if (lyric.length === tlyric.length) {
           for (let i = 0; i < lyric.length; i++) {
@@ -72,10 +88,11 @@ async function fetchNeteaseMusicLyrics(songId: number): Promise<Lyric[]> {
         }
       }
 
+      console.log("[YoutubeMusicLyrics] fetchNeteaseMusicLyrics", lyric);
       return lyric;
     })
     .catch(err => {
-      console.error("fetchNeteaseMusicID", err);
+      console.error("[YoutubeMusicLyrics] fetchNeteaseMusicLyrics", err);
       return null;
     });
 }

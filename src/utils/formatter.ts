@@ -17,20 +17,18 @@ export function artistFormatter(title: string, artists: string[], isMV: boolean 
 export function titleFormatter(title: string, artists: string[], isMV: boolean = false): string {
   title = title.toLowerCase();
 
-  if (!isMV) {
-    return title;
-  }
+  if (isMV) {
+    const regexs = formatData[artists[0]]?.regex || [];
 
-  const regexs = formatData[artists[0]]?.regex || [];
+    for (const regex of regexs) {
+      const result = new RegExp(regex).exec(title);
+      console.log(regex, result);
 
-  for (const regex of regexs) {
-    const result = new RegExp(regex).exec(title);
-    console.log(regex, result);
-
-    if (result) {
-      return result[1];
+      if (result) {
+        return result[1].trim();
+      }
     }
   }
 
-  return title;
+  return title.trim();
 }
