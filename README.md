@@ -31,7 +31,8 @@ Click on the lyrics area to toggle fullscreen mode
 - Fetch lyrics using [`NeteaseCloudMusicApi`](https://github.com/Binaryify/NeteaseCloudMusicApi) and [`musixmatch`](https://www.musixmatch.com)
 - Render lyrics with javascript!
 
-## Acknowledgements
+## Acknowledgments
 
 - [Binaryify/NeteaseCloudMusicApi](https://github.com/Binaryify/NeteaseCloudMusicApi)
 - [mantou132/Spotify-Lyrics](https://github.com/mantou132/Spotify-Lyrics)
+- [繁化姬](https://zhconvert.org/)
