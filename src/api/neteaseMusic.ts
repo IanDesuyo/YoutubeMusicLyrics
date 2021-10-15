@@ -1,6 +1,7 @@
 import { request } from "../utils/GM";
 import src2lyric from "../utils/src2lyric";
-import translate from "./googleTranslate";
+import zhconvert from "./zhconvert";
+import googleTranslate from "./googleTranslate";
 
 export default async function fetchNeteaseMusic(
   title: string,
@@ -64,13 +65,17 @@ export async function fetchNeteaseMusicLyrics(songId: number): Promise<Lyric[]> 
       const lyric = src2lyric(data.lrc.lyric);
 
       if (data.tlyric?.lyric) {
-        const tlyric = await src2lyric(
-          await translate(
+        let translated: string;
+        if (process.env.USE_ZHCONVERT == "true") {
+          translated = await zhconvert(ZHConverter.Taiwan, data.tlyric.lyric);
+        } else {
+          translated = await googleTranslate(
             Language.ChineseSimplified,
             Language.ChineseTraditional,
             data.tlyric.lyric
-          )
-        );
+          );
+        }
+        const tlyric = await src2lyric(translated);
 
         if (lyric.length === tlyric.length) {
           for (let i = 0; i < lyric.length; i++) {

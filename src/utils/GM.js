@@ -1,4 +1,4 @@
-export async function request(url, ...options) {
+export async function request(url, options = {}) {
   return new Promise((resolve, reject) => {
     GM_xmlhttpRequest({
       url,

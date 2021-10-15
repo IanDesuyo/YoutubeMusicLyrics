@@ -5,6 +5,16 @@ const enum Language {
   ChineseTraditional = "zh-TW",
 }
 
+const enum ZHConverter {
+  Simplified = "Simplified",
+  Traditional = "Traditional",
+  China = "China",
+  Hongkong = "Hongkong",
+  Taiwan = "Taiwan",
+  WikiSimplified = "WikiSimplified",
+  WikiTraditional = "WikiTraditional",
+}
+
 const enum LyricSource {
   NeteaseMusic = "NeteaseMusic",
   Musixmatch = "Musixmatch",

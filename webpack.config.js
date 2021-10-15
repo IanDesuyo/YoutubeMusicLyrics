@@ -39,7 +39,12 @@ module.exports = () => {
         headers: {
           name: "Youtube Music Lyrics",
           match: ["https://music.youtube.com/*"],
-          connect: [cloudmusicApiDomain, "apic-desktop.musixmatch.com", "translate.googleapis.com"],
+          connect: [
+            cloudmusicApiDomain,
+            "apic-desktop.musixmatch.com",
+            "translate.googleapis.com",
+            "api.zhconvert.org",
+          ],
           noframes: true,
           grant: ["GM_xmlhttpRequest", "GM_getValue", "GM_setValue"],
           version: dev ? `[version]-build.[buildNo]` : `[version]`,
